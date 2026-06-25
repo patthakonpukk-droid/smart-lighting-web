@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Light Web</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #2c3e50; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background-color: #34495e; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); width: 300px; }
+        .status-box { margin: 20px 0; font-size: 24px; font-weight: bold; padding: 20px; border-radius: 10px; background: #2c3e50; }
+        .on { color: #2ecc71; }
+        .off { color: #e74c3c; }
+        button { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; color: white; background-color: #3498db;}
+        button:hover { background-color: #2980b9; }
+        #loading { font-size: 14px; color: #95a5a6; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>ระบบไฟบ้าน</h2>
+        <div class="status-box" id="status-display">กำลังโหลด...</div>
+        <button onclick="toggleLight()">สลับสถานะไฟ</button>
+        <div id="loading">เชื่อมต่อฐานข้อมูล...</div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 🛑 นำ API Key ของคุณมาใส่ตรงช่องว่างในบรรทัดนี้เหมือนเดิมครับ 🛑
+        const supabaseKey = 'sb_publishable_s-ez7O56MdfciUpaJ6Q-uQ_X8ewzGD8';
+        // ==========================================
+
+        const supabaseUrl = 'https://phioecfmmazjkiqypgjg.supabase.co'; 
+        
+        // แก้ไขชื่อตัวแปรไม่ให้ซ้ำกับระบบ
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let currentStatus = false;
+        const deviceId = 1; 
+
+        const statusDisplay = document.getElementById('status-display');
+        const loadingText = document.getElementById('loading');
+
+        async function fetchLight() {
+            loadingText.innerText = "กำลังดึงข้อมูล...";
+            const { data, error } = await supabaseClient.from('devices').select('*').eq('id', deviceId).single();
+            if (data) {
+                updateUI(data.status);
+                loadingText.innerText = "ซิงค์ข้อมูลสำเร็จ";
+            } else {
+                loadingText.innerText = "ไม่พบข้อมูล กรุณาเช็คฐานข้อมูล (ลืมสร้าง Row หรือเปล่า?)";
+            }
+        }
+
+        async function toggleLight() {
+            loadingText.innerText = "กำลังส่งคำสั่ง...";
+            const newStatus = !currentStatus; 
+            const { error } = await supabaseClient.from('devices').update({ status: newStatus }).eq('id', deviceId);
+            if (error) {
+                loadingText.innerText = "Error: " + error.message;
+            } else {
+                loadingText.innerText = "ส่งคำสั่งสำเร็จ";
+                updateUI(newStatus);
+            }
+        }
+
+        function updateUI(status) {
+            currentStatus = status;
+            if (status) {
+                statusDisplay.innerHTML = 'ไฟติดสว่าง 💡';
+                statusDisplay.className = 'status-box on';
+            } else {
+                statusDisplay.innerHTML = 'ไฟดับ 🌑';
+                statusDisplay.className = 'status-box off';
+            }
+        }
+
+        supabaseClient.channel('public:devices')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'devices' }, payload => {
+              updateUI(payload.new.status);
+          })
+          .subscribe();
+
+        fetchLight();
+    </script>
+</body>
+</html>
