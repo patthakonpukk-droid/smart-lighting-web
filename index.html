@@ -7,65 +7,104 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; background-color: #2c3e50; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background-color: #34495e; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); width: 300px; }
-        .status-box { margin: 20px 0; font-size: 24px; font-weight: bold; padding: 20px; border-radius: 10px; background: #2c3e50; }
-        .on { color: #2ecc71; }
+        .card { background-color: #34495e; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); width: 320px; }
+        
+        /* กล่องสถานะไฟ */
+        .status-box { margin: 15px 0; font-size: 24px; font-weight: bold; padding: 20px; border-radius: 10px; background: #2c3e50; transition: 0.3s; }
+        .on { color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); }
         .off { color: #e74c3c; }
-        button { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; color: white; background-color: #3498db;}
-        button:hover { background-color: #2980b9; }
-        #loading { font-size: 14px; color: #95a5a6; margin-top: 15px; }
+        
+        /* กล่องแสดงเซ็นเซอร์ */
+        .sensor-box { background: #2c3e50; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; font-size: 16px; border: 1px solid #7f8c8d; }
+        .sensor-item { margin-bottom: 8px; }
+        
+        /* ปุ่มต่างๆ */
+        button { padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 10px; color: white; transition: 0.3s;}
+        
+        #light-btn { background-color: #3498db; }
+        #light-btn:hover:not(:disabled) { background-color: #2980b9; }
+        #light-btn:disabled { background-color: #7f8c8d; cursor: not-allowed; opacity: 0.6; }
+        
+        #mode-btn { background-color: #9b59b6; }
+        #mode-btn.auto-mode { background-color: #e67e22; }
+        
+        #loading { font-size: 14px; color: #bdc3c7; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>ระบบไฟบ้าน</h2>
+        <h2>ระบบไฟบ้านอัจฉริยะ</h2>
+        
+        <!-- ส่วนแสดงค่าเซ็นเซอร์ -->
+        <div class="sensor-box">
+            <div class="sensor-item">🚶‍♂️ คนเดินผ่าน: <span id="pir-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
+            <div class="sensor-item">☀️ ระดับแสง: <span id="ldr-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
+        </div>
+
         <div class="status-box" id="status-display">กำลังโหลด...</div>
-        <button onclick="toggleLight()">สลับสถานะไฟ</button>
+        
+        <!-- ปุ่มควบคุม -->
+        <button id="mode-btn" onclick="toggleMode()">โหมด: Manual</button>
+        <button id="light-btn" onclick="toggleLight()">สลับสถานะไฟ</button>
+        
         <div id="loading">เชื่อมต่อฐานข้อมูล...</div>
     </div>
 
     <script>
         // ==========================================
-        // 🛑 นำ API Key ของคุณมาใส่ตรงช่องว่างในบรรทัดนี้เหมือนเดิมครับ 🛑
         const supabaseKey = 'sb_publishable_s-ez7O56MdfciUpaJ6Q-uQ_X8ewzGD8';
-        // ==========================================
-
         const supabaseUrl = 'https://phioecfmmazjkiqypgjg.supabase.co'; 
+        // ==========================================
         
-        // แก้ไขชื่อตัวแปรไม่ให้ซ้ำกับระบบ
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         let currentStatus = false;
+        let currentMode = false; // false = Manual, true = Auto
         const deviceId = 1; 
 
         const statusDisplay = document.getElementById('status-display');
         const loadingText = document.getElementById('loading');
+        const lightBtn = document.getElementById('light-btn');
+        const modeBtn = document.getElementById('mode-btn');
 
+        // ฟังก์ชันดึงข้อมูลครั้งแรก
         async function fetchLight() {
             loadingText.innerText = "กำลังดึงข้อมูล...";
             const { data, error } = await supabaseClient.from('devices').select('*').eq('id', deviceId).single();
             if (data) {
-                updateUI(data.status);
+                updateUI(data.status, data.mode);
+                updateSensors(data.motion_detected, data.light_level);
                 loadingText.innerText = "ซิงค์ข้อมูลสำเร็จ";
             } else {
-                loadingText.innerText = "ไม่พบข้อมูล กรุณาเช็คฐานข้อมูล (ลืมสร้าง Row หรือเปล่า?)";
+                loadingText.innerText = "ไม่พบข้อมูล กรุณาเช็คตารางใน Supabase";
             }
         }
 
+        // ฟังก์ชันสลับสถานะไฟ (ทำงานเฉพาะตอนเป็น Manual)
         async function toggleLight() {
-            loadingText.innerText = "กำลังส่งคำสั่ง...";
+            if (currentMode) return; // ถ้าเป็นโหมด Auto ไม่ให้กดสั่งไฟ
+            loadingText.innerText = "กำลังส่งคำสั่งไฟ...";
             const newStatus = !currentStatus; 
             const { error } = await supabaseClient.from('devices').update({ status: newStatus }).eq('id', deviceId);
-            if (error) {
-                loadingText.innerText = "Error: " + error.message;
-            } else {
-                loadingText.innerText = "ส่งคำสั่งสำเร็จ";
-                updateUI(newStatus);
-            }
+            if (error) loadingText.innerText = "Error: " + error.message;
+            else loadingText.innerText = "ส่งคำสั่งไฟสำเร็จ";
         }
 
-        function updateUI(status) {
+        // ฟังก์ชันสลับโหมด Auto / Manual
+        async function toggleMode() {
+            loadingText.innerText = "กำลังเปลี่ยนโหมด...";
+            const newMode = !currentMode; 
+            const { error } = await supabaseClient.from('devices').update({ mode: newMode }).eq('id', deviceId);
+            if (error) loadingText.innerText = "Error: " + error.message;
+            else loadingText.innerText = "เปลี่ยนโหมดสำเร็จ";
+        }
+
+        // อัปเดตหน้าจอส่วนของไฟและปุ่มโหมด
+        function updateUI(status, mode) {
             currentStatus = status;
+            currentMode = mode;
+            
+            // จัดการสีและข้อความของสถานะไฟ
             if (status) {
                 statusDisplay.innerHTML = 'ไฟติดสว่าง 💡';
                 statusDisplay.className = 'status-box on';
@@ -73,14 +112,47 @@
                 statusDisplay.innerHTML = 'ไฟดับ 🌑';
                 statusDisplay.className = 'status-box off';
             }
+
+            // จัดการปุ่มกดตามโหมดที่เป็นอยู่
+            if (mode) {
+                modeBtn.innerText = "โหมด: Auto (เซ็นเซอร์ทำงาน)";
+                modeBtn.className = "auto-mode";
+                lightBtn.disabled = true; // ล็อคปุ่มสลับไฟ
+                lightBtn.innerText = "ปิดใช้งานในโหมด Auto";
+            } else {
+                modeBtn.innerText = "โหมด: Manual (ควบคุมเอง)";
+                modeBtn.className = "";
+                lightBtn.disabled = false; // ปลดล็อคปุ่มสลับไฟ
+                lightBtn.innerText = "สลับสถานะไฟ";
+            }
         }
 
+        // อัปเดตข้อความเซ็นเซอร์
+        function updateSensors(motion, light) {
+            const pirDisplay = document.getElementById('pir-val');
+            if (motion) {
+                pirDisplay.innerText = "ตรวจพบ!";
+                pirDisplay.style.color = "#e74c3c"; // สีแดงตอนเจอคน
+            } else {
+                pirDisplay.innerText = "ปกติ";
+                pirDisplay.style.color = "#2ecc71"; // สีเขียวตอนปกติ
+            }
+
+            // เช็คว่ามีข้อมูลแสงส่งมาไหม ถ้ามีให้แสดง ถ้าไม่มีแสดงเครื่องหมาย -
+            document.getElementById('ldr-val').innerText = (light !== null && light !== undefined) ? light : "ไม่มีข้อมูล";
+            document.getElementById('ldr-val').style.color = "#ecf0f1";
+        }
+
+        // รับข้อมูลอัปเดตแบบ Real-time จาก Supabase
         supabaseClient.channel('public:devices')
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'devices' }, payload => {
-              updateUI(payload.new.status);
+              // อัปเดตทุกอย่างทันทีที่มีการเปลี่ยนแปลงใน Database
+              updateUI(payload.new.status, payload.new.mode);
+              updateSensors(payload.new.motion_detected, payload.new.light_level);
           })
           .subscribe();
 
+        // เรียกใช้งานครั้งแรกตอนเปิดหน้าเว็บ
         fetchLight();
     </script>
 </body>
