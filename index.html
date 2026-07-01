@@ -50,18 +50,18 @@
         <p id="login-error" style="color: #e74c3c; display: none; font-size: 14px; margin-top: 10px;">รหัสผ่านไม่ถูกต้อง!</p>
     </div>
 
-    <!-- ================= ส่วนที่ 2: หน้าควบคุมหลัก (ซ่อนไว้ก่อน) ================= -->
+    <!-- ================= ส่วนที่ 2: หน้าควบคุมหลัก ================= -->
     <div class="card hidden" id="main-section">
         <h2>ระบบไฟบ้านอัจฉริยะ</h2>
         
         <div class="sensor-box">
             <div class="sensor-item">🚶‍♂️ คนเดินผ่าน: <span id="pir-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
-            <div class="sensor-item">☀️ ระดับแสง: <span id="ldr-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
+            <div class="sensor-item">สภาพแสง: <span id="ldr-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
         </div>
 
         <div class="status-box" id="status-display">กำลังโหลด...</div>
         
-        <button id="mode-btn" onclick="toggleMode()">โหมด Manual</button>
+        <button id="mode-btn" onclick="toggleMode()">โหมด: Manual</button>
         <button id="light-btn" onclick="toggleLight()">สลับสถานะไฟ</button>
         
         <div id="loading">เชื่อมต่อฐานข้อมูล...</div>
@@ -71,8 +71,8 @@
     </div>
 
     <script>
-        // 🛑 ตั้งรหัสผ่านของคุณตรงนี้เลยครับ (แก้ตัวเลขในเครื่องหมายคำพูด) 🛑
-        const MY_PASSWORD = "Smartiot"; 
+        // 🛑 ตั้งรหัสผ่านของคุณตรงนี้ครับ 🛑
+        const MY_PASSWORD = "SmartLig"; 
         
         // ==========================================
         const supabaseKey = 'sb_publishable_s-ez7O56MdfciUpaJ6Q-uQ_X8ewzGD8';
@@ -90,7 +90,7 @@
         const lightBtn = document.getElementById('light-btn');
         const modeBtn = document.getElementById('mode-btn');
 
-        // ตรวจสอบว่าเคยล็อกอินไว้แล้วหรือยังตอนเปิดหน้าเว็บ
+        // ตรวจสอบสถานะการล็อกอินตอนเปิดหน้าเว็บ
         window.onload = () => {
             const isLoggedIn = sessionStorage.getItem("isLoggedIn");
             if (isLoggedIn === "true") {
@@ -98,33 +98,27 @@
             }
         };
 
-        // ฟังก์ชันตรวจรหัสผ่าน
         function checkPassword() {
             const inputVal = document.getElementById('password-input').value;
             if (inputVal === MY_PASSWORD) {
-                sessionStorage.setItem("isLoggedIn", "true"); // บันทึกการล็อกอิน
+                sessionStorage.setItem("isLoggedIn", "true"); 
                 showMainUI();
             } else {
                 document.getElementById('login-error').style.display = 'block';
             }
         }
 
-        // ฟังก์ชันออกจากระบบ
         function logout() {
-            sessionStorage.removeItem("isLoggedIn"); // ล้างค่าการล็อกอิน
-            location.reload(); // โหลดหน้าเว็บใหม่ให้กลับไปหน้าล็อกอิน
+            sessionStorage.removeItem("isLoggedIn"); 
+            location.reload(); 
         }
 
-        // ฟังก์ชันเปิดหน้าควบคุม
         function showMainUI() {
-            // ซ่อนหน้าล็อกอิน และโชว์หน้าควบคุม
             document.getElementById('login-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             
-            // เริ่มการดึงข้อมูลจากฐานข้อมูลหลังจากล็อกอินผ่านแล้วเท่านั้น
             fetchLight();
             
-            // เริ่มรับข้อมูล Real-time
             supabaseClient.channel('public:devices')
               .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'devices' }, payload => {
                   updateUI(payload.new.status, payload.new.mode);
@@ -133,7 +127,6 @@
               .subscribe();
         }
 
-        // ================= ฟังก์ชันการทำงานเดิม =================
         async function fetchLight() {
             loadingText.innerText = "กำลังดึงข้อมูล...";
             const { data, error } = await supabaseClient.from('devices').select('*').eq('id', deviceId).single();
@@ -188,6 +181,7 @@
             }
         }
 
+        // ฟังก์ชันอัปเดตเซ็นเซอร์และแปลค่าแสงเป็นข้อความ
         function updateSensors(motion, light) {
             const pirDisplay = document.getElementById('pir-val');
             if (motion) {
@@ -198,8 +192,29 @@
                 pirDisplay.style.color = "#2ecc71"; 
             }
 
-            document.getElementById('ldr-val').innerText = (light !== null && light !== undefined) ? light : "ไม่มีข้อมูล";
-            document.getElementById('ldr-val').style.color = "#ecf0f1";
+            const ldrDisplay = document.getElementById('ldr-val');
+            if (light !== null && light !== undefined) {
+                let lightText = "";
+                let lightColor = "";
+
+                // เช็คช่วงค่าแสงและเปลี่ยนเป็นข้อความ
+                if (light < 1000) {
+                    lightText = "☀️ สว่างมาก (" + light + ")";
+                    lightColor = "#f1c40f"; 
+                } else if (light < 3000) {
+                    lightText = "⛅ แสงสลัว (" + light + ")";
+                    lightColor = "#e67e22"; 
+                } else {
+                    lightText = "🌙 มืดสนิท (" + light + ")";
+                    lightColor = "#bdc3c7"; 
+                }
+
+                ldrDisplay.innerText = lightText;
+                ldrDisplay.style.color = lightColor;
+            } else {
+                ldrDisplay.innerText = "ไม่มีข้อมูล";
+                ldrDisplay.style.color = "#ecf0f1";
+            }
         }
     </script>
 </body>
