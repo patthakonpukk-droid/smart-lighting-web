@@ -9,7 +9,6 @@
         body { font-family: sans-serif; background-color: #2c3e50; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background-color: #34495e; padding: 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); width: 320px; }
         
-        /* สไตล์สำหรับช่องกรอกรหัสผ่าน */
         .login-input { padding: 12px; width: 90%; margin-bottom: 15px; border-radius: 8px; border: none; font-size: 16px; text-align: center; box-sizing: border-box; }
         
         .status-box { margin: 15px 0; font-size: 24px; font-weight: bold; padding: 20px; border-radius: 10px; background: #2c3e50; transition: 0.3s; }
@@ -28,7 +27,6 @@
         #mode-btn { background-color: #9b59b6; }
         #mode-btn.auto-mode { background-color: #e67e22; }
 
-        /* ปุ่มหน้าล็อกอิน */
         .login-btn { background-color: #2ecc71; }
         .login-btn:hover { background-color: #27ae60; }
         .logout-btn { background-color: #e74c3c; padding: 10px; font-size: 14px; margin-top: 15px; }
@@ -36,7 +34,6 @@
         
         #loading { font-size: 14px; color: #bdc3c7; margin-top: 10px; }
         
-        /* คลาสสำหรับซ่อนหน้าต่าง */
         .hidden { display: none !important; }
     </style>
 </head>
@@ -56,7 +53,7 @@
         
         <div class="sensor-box">
             <div class="sensor-item">🚶‍♂️ คนเดินผ่าน: <span id="pir-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
-            <div class="sensor-item">สภาพแสง: <span id="ldr-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
+            <div class="sensor-item">☀️ ระดับแสง: <span id="ldr-val" style="font-weight: bold; color: #f1c40f;">รอข้อมูล...</span></div>
         </div>
 
         <div class="status-box" id="status-display">กำลังโหลด...</div>
@@ -66,12 +63,10 @@
         
         <div id="loading">เชื่อมต่อฐานข้อมูล...</div>
 
-        <!-- ปุ่มออกจากระบบ -->
         <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
     </div>
 
     <script>
-        // 🛑 ตั้งรหัสผ่านของคุณตรงนี้ครับ 🛑
         const MY_PASSWORD = "Smartlig"; 
         
         // ==========================================
@@ -90,7 +85,6 @@
         const lightBtn = document.getElementById('light-btn');
         const modeBtn = document.getElementById('mode-btn');
 
-        // ตรวจสอบสถานะการล็อกอินตอนเปิดหน้าเว็บ
         window.onload = () => {
             const isLoggedIn = sessionStorage.getItem("isLoggedIn");
             if (isLoggedIn === "true") {
@@ -181,7 +175,6 @@
             }
         }
 
-        // ฟังก์ชันอัปเดตเซ็นเซอร์และแปลค่าแสงเป็นข้อความ
         function updateSensors(motion, light) {
             const pirDisplay = document.getElementById('pir-val');
             if (motion) {
@@ -197,15 +190,15 @@
                 let lightText = "";
                 let lightColor = "";
 
-                // เช็คช่วงค่าแสงและเปลี่ยนเป็นข้อความ
+                // เอาค่าตัวเลขขึ้นก่อน แล้วตามด้วยข้อความวงเล็บ
                 if (light < 1000) {
-                    lightText = "☀️ สว่างมาก (" + light + ")";
+                    lightText = light + " (☀️ สว่างมาก)";
                     lightColor = "#f1c40f"; 
                 } else if (light < 3000) {
-                    lightText = "⛅ แสงสลัว (" + light + ")";
+                    lightText = light + " (⛅ แสงสลัว)";
                     lightColor = "#e67e22"; 
                 } else {
-                    lightText = "🌙 มืดสนิท (" + light + ")";
+                    lightText = light + " (🌙 มืดสนิท)";
                     lightColor = "#bdc3c7"; 
                 }
 
