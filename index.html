@@ -39,7 +39,6 @@
 </head>
 <body>
 
-    <!-- ================= ส่วนที่ 1: หน้าล็อกอิน ================= -->
     <div class="card" id="login-section">
         <h2>🔒 ใส่รหัสผ่าน</h2>
         <input type="password" id="password-input" class="login-input" placeholder="กรอกรหัสผ่านที่นี่...">
@@ -47,7 +46,6 @@
         <p id="login-error" style="color: #e74c3c; display: none; font-size: 14px; margin-top: 10px;">รหัสผ่านไม่ถูกต้อง!</p>
     </div>
 
-    <!-- ================= ส่วนที่ 2: หน้าควบคุมหลัก ================= -->
     <div class="card hidden" id="main-section">
         <h2>ระบบไฟบ้านอัจฉริยะ</h2>
         
@@ -190,11 +188,11 @@
                 let lightText = "";
                 let lightColor = "";
 
-                // เอาค่าตัวเลขขึ้นก่อน แล้วตามด้วยข้อความวงเล็บ
-                if (light < 1000) {
+                // เอาค่าตัวเลขขึ้นก่อน แล้วตามด้วยข้อความวงเล็บ (ปรับสเกลให้ ESP8266)
+                if (light < 200) {
                     lightText = light + " (☀️ สว่างมาก)";
                     lightColor = "#f1c40f"; 
-                } else if (light < 3000) {
+                } else if (light < 400) {
                     lightText = light + " (⛅ แสงสลัว)";
                     lightColor = "#e67e22"; 
                 } else {
